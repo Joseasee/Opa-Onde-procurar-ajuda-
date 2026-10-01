@@ -606,7 +606,6 @@
       const typeList = document.getElementById('typeList');
       const typeAll = document.getElementById('typeAll');
       const paymentSelect = document.getElementById('paymentSelect');
-      const applyFiltersBtn = document.getElementById('applyFiltersBtn');
       const clearFiltersBtn = document.getElementById('clearFiltersBtn');
       const openListBtn = document.getElementById('openListBtn');
       const closeListBtn = document.getElementById('closeListBtn');
@@ -633,10 +632,11 @@
         typeAll.checked = n === typeBoxes.length;
         typeAll.indeterminate = n > 0 && n < typeBoxes.length;
       }
-      typeBoxes.forEach(b=> b.addEventListener('change', syncTypeAll));
+      typeBoxes.forEach(b=> b.addEventListener('change', ()=>{ syncTypeAll(); applyFilters(); }));
       typeAll.addEventListener('change', ()=>{
         typeBoxes.forEach(b=> b.checked = typeAll.checked);
         syncTypeAll();
+        applyFilters();
       });
 
       function readFilters(){
@@ -707,16 +707,9 @@
         applyFilters();
       }
 
-      function closeFiltersPanel(){
-        filtersPanel.style.display = 'none';
-        filtersChevron.classList.remove('open');
-      }
-
-      applyFiltersBtn.addEventListener('click', ()=>{
-        applyFilters();
-        closeFiltersPanel();
-        document.querySelector('.map-frame').scrollIntoView({ behavior:'smooth', block:'start' });
-      });
+      // filtros aplicados automaticamente a cada mudança (o painel continua aberto)
+      [filterAdult, filterMinor, paymentSelect].forEach(el=> el.addEventListener('change', applyFilters));
+      document.querySelectorAll('input[name="fmt"]').forEach(el=> el.addEventListener('change', applyFilters));
       clearFiltersBtn.addEventListener('click', clearFilters);
       listClearBtn.addEventListener('click', clearFilters);
 
@@ -802,6 +795,13 @@
         const isOpen = filtersPanel.style.display !== 'none';
         filtersPanel.style.display = isOpen ? 'none' : 'block';
         filtersChevron.classList.toggle('open', !isOpen);
+      });
+
+      // botão no fim do painel: recolhe (somente quando a pessoa tocar nele)
+      document.getElementById('collapseFiltersBtn').addEventListener('click', ()=>{
+        filtersPanel.style.display = 'none';
+        filtersChevron.classList.remove('open');
+        toggleFiltersBtn.scrollIntoView({ behavior:'smooth', block:'start' });
       });
 
       async function searchAddress(){
