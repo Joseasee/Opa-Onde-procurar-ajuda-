@@ -396,6 +396,74 @@
           ageGroups: ['adultos','menores'],
           categories: ['caps','caps-ad'],
           lat: -22.9068, lon: -43.1729
+        },
+        {
+          name: "CAPS III Franco Basaglia",
+          type: "CAPS III (24h) — SUS",
+          address: "Av. Venceslau Brás, 65 (fundos) — Botafogo",
+          phone: "+552123421765",
+          phoneDisplay: "(21) 2342-1765",
+          hours: "24 horas",
+          note: "Acolhimento contínuo e acompanhamento de transtornos mentais graves. Atende a AP 2.1 (Glória, Catete, Laranjeiras, Botafogo, Urca, Humaitá, Copacabana e Leme).",
+          ageGroups: ['adultos'],
+          categories: ['caps'],
+          lat: -22.9527, lon: -43.17583
+        },
+        {
+          name: "CAPS AD III Carolina Maria de Jesus",
+          type: "CAPS AD — álcool e outras drogas (SUS)",
+          address: "R. da Emancipação, 9 — São Cristóvão",
+          hours: "Seg–Sex, 8h–17h (confirme o horário antes de ir)",
+          note: "Atende pessoas com necessidades decorrentes do uso de álcool e outras drogas. Área: AP 1.0 (Centro, Santa Teresa, Estácio, São Cristóvão, Benfica e arredores).",
+          ageGroups: ['adultos'],
+          categories: ['caps-ad'],
+          lat: -22.8990, lon: -43.2277
+        },
+        {
+          name: "CAPS AD II Heleno de Freitas",
+          type: "CAPS AD — álcool e outras drogas (SUS)",
+          address: "R. Dona Mariana, 151 — Botafogo",
+          phone: "+552123421775",
+          phoneDisplay: "(21) 2342-1775",
+          hours: "Seg–Sex, 8h–17h",
+          note: "Unidade especializada em álcool e outras drogas (AP 2.1), com acesso fácil a partir da região central.",
+          ageGroups: ['adultos'],
+          categories: ['caps-ad'],
+          lat: -22.9545, lon: -43.18782
+        },
+        {
+          name: "CAPSi III Maurício de Sousa",
+          type: "CAPSi — infantojuvenil (SUS)",
+          address: "Av. Venceslau Brás, 65 C (fundos) — Botafogo",
+          phone: "+552130962850",
+          phoneDisplay: "(21) 3096-2850",
+          hours: "Seg–Sáb, 9h–17h (confirme o horário antes de ir)",
+          note: "Atendimento especializado em saúde mental para crianças e adolescentes. Atende Centro e parte da Zona Sul (AP 1.0 e 2.1).",
+          ageGroups: ['menores'],
+          categories: ['caps'],
+          lat: -22.95262, lon: -43.17574
+        },
+        {
+          name: "CAPSi II Carim",
+          type: "CAPSi — infantojuvenil (SUS)",
+          address: "Av. Venceslau Brás, 71 — Botafogo",
+          hours: "Seg–Sex, 8h–17h",
+          note: "Voltado ao atendimento infantojuvenil no âmbito da saúde mental pública. Ligue antes para confirmar o atendimento.",
+          ageGroups: ['menores'],
+          categories: ['caps'],
+          lat: -22.95285, lon: -43.17566
+        },
+        {
+          name: "CAPS II Carlos Augusto Magal",
+          type: "CAPS II — SUS",
+          address: "Av. Dom Hélder Câmara, 1184 (fundos) — Benfica",
+          phone: "+552120429967",
+          phoneDisplay: "(21) 2042-9967",
+          hours: "Seg–Sex, 8h–17h",
+          note: "Atende a região da AP 1.0 / AP 3.1 (Benfica, Manguinhos, Maré e arredores) com suporte multiprofissional contínuo.",
+          ageGroups: ['adultos'],
+          categories: ['caps'],
+          lat: -22.8868, lon: -43.2504
         }
       ];
 
@@ -472,7 +540,96 @@
       radiusEllipse.id = 'radiusEllipse';
       markerLayer.appendChild(radiusEllipse);
 
+      // ---- Zoom e arraste no mapa offline: pinça, scroll do mouse e botões +/− ----
+      const mapFrameEl = document.querySelector('.map-frame');
+      const zoomLayer = document.getElementById('zoomLayer');
+      const Z_MIN = 1, Z_MAX = 6;
+      let zs = 1, ztx = 0, zty = 0, gestureMoved = false;
+
+      function applyZoom(){
+        const W = zoomLayer.offsetWidth, H = zoomLayer.offsetHeight;
+        ztx = Math.min(0, Math.max(W * (1 - zs), ztx));
+        zty = Math.min(0, Math.max(H * (1 - zs), zty));
+        zoomLayer.style.transform = `translate(${ztx}px, ${zty}px) scale(${zs})`;
+        zoomLayer.style.setProperty('--z', zs);
+      }
+      function zoomAt(cx, cy, factor){
+        const ns = Math.min(Z_MAX, Math.max(Z_MIN, zs * factor));
+        const k = ns / zs;
+        ztx = cx - (cx - ztx) * k;
+        zty = cy - (cy - zty) * k;
+        zs = ns;
+        applyZoom();
+      }
+      function frameRect(){ return mapFrameEl.getBoundingClientRect(); }
+
+      // scroll do mouse
+      mapFrameEl.addEventListener('wheel', (e)=>{
+        if(mode !== 'static') return;
+        e.preventDefault();
+        const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+        const r = frameRect();
+        zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-dy * 0.0015));
+      }, { passive:false });
+
+      // botões + e −
+      function zoomButton(factor){
+        const r = frameRect();
+        zoomAt(r.width / 2, r.height / 2, factor);
+      }
+      document.getElementById('zoomInBtn').addEventListener('click', ()=> zoomButton(1.5));
+      document.getElementById('zoomOutBtn').addEventListener('click', ()=> zoomButton(1 / 1.5));
+
+      // dedos (pinça + arrastar) e mouse (arrastar)
+      const ptrs = new Map();
+      let lastDist = 0, lastMid = null, startPt = null;
+      function pinchInfo(){
+        const [a, b] = Array.from(ptrs.values());
+        return {
+          dist: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+          mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+        };
+      }
+      mapFrameEl.addEventListener('pointerdown', (e)=>{
+        if(mode !== 'static' || (e.target.closest && e.target.closest('.zoom-ctl'))) return;
+        if(e.pointerType === 'mouse' && e.button !== 0) return;
+        if(ptrs.size === 0) gestureMoved = false;
+        ptrs.set(e.pointerId, { x:e.clientX, y:e.clientY });
+        startPt = { x:e.clientX, y:e.clientY };
+        if(ptrs.size === 2){
+          const info = pinchInfo();
+          lastDist = info.dist; lastMid = info.mid;
+          gestureMoved = true;
+        }
+      });
+      window.addEventListener('pointermove', (e)=>{
+        const p = ptrs.get(e.pointerId);
+        if(!p) return;
+        if(ptrs.size === 1){
+          if(!gestureMoved && Math.hypot(e.clientX - startPt.x, e.clientY - startPt.y) < 6) return;
+          gestureMoved = true;
+          ztx += e.clientX - p.x;
+          zty += e.clientY - p.y;
+          p.x = e.clientX; p.y = e.clientY;
+          applyZoom();
+        } else if(ptrs.size === 2){
+          p.x = e.clientX; p.y = e.clientY;
+          const { dist, mid } = pinchInfo();
+          const r = frameRect();
+          zoomAt(mid.x - r.left, mid.y - r.top, dist / lastDist);
+          ztx += mid.x - lastMid.x;
+          zty += mid.y - lastMid.y;
+          applyZoom();
+          lastDist = dist; lastMid = mid;
+        }
+      });
+      function endPointer(e){ ptrs.delete(e.pointerId); }
+      window.addEventListener('pointerup', endPointer);
+      window.addEventListener('pointercancel', endPointer);
+      window.addEventListener('resize', applyZoom);
+
       function handlePointerStatic(clientX, clientY){
+        if(gestureMoved) return; // foi arraste/pinça, não um toque
         const rect = mapImg.getBoundingClientRect();
         const relX = (clientX - rect.left) / rect.width * IMG_W;
         const relY = (clientY - rect.top) / rect.height * IMG_H;
@@ -522,7 +679,13 @@
       }
 
       function initLiveMap(){
-        liveMap = L.map('mapLive', { scrollWheelZoom:false }).setView(CENTER, 16);
+        liveMap = L.map('mapLive', {
+          scrollWheelZoom: true,   // zoom com o scroll do mouse
+          touchZoom: true,         // zoom com pinça (dedos)
+          dragging: true,
+          zoomControl: true,       // botões + e −
+          minZoom: 10
+        }).setView(CENTER, 16);
         liveTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
@@ -555,6 +718,7 @@
         mapImg.style.display = 'none';
         markerLayer.style.display = 'none';
         mapLiveEl.style.display = 'block';
+        document.getElementById('zoomCtl').style.display = 'none';
         mapBadge.textContent = 'mapa ao vivo · zoom real';
         setTimeout(()=> liveMap && liveMap.invalidateSize(), 50);
       }
