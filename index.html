@@ -419,6 +419,7 @@
         }
         footer strong{color:var(--ink);}
         .crisis{
+          display:block;
           margin-top:10px;
           padding:10px 12px;
           border-radius:12px;
@@ -426,7 +427,11 @@
           color:var(--ink);
           font-size:0.76rem;
           line-height:1.45;
+          text-decoration:none;
+          cursor:pointer;
         }
+        .crisis strong{ text-decoration:underline; }
+        .crisis:active{ opacity:0.8; }
 
         /* ---- Painel de filtros (saúde mental) ---- */
         .fp-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding-bottom:10px; border-bottom:1px solid var(--border); }
@@ -560,9 +565,9 @@
         <div id="resultsList"></div>
     </div>
 
-    <div class="crisis">
+    <a class="crisis" href="tel:188" aria-label="Ligar gratuitamente para o CVV, número 188">
         💬 Se você está passando por uma crise emocional agora, ligue gratuitamente para o <strong>CVV — 188</strong> (24h, todos os dias) ou procure a UPA/CER mais próxima.
-    </div>
+    </a>
 
     <footer>
         Este site carrega um <strong>mapa ao vivo do OpenStreetMap.</strong> (caso não saiba como chegar clique "Como chegar" ele vai abrir as rotas no maps). Se não houver internet no momento uma imagem que <strong>não tem 100% de precisão</strong> vai ser carregada — telefones e horários de atendimento público podem mudar — confirme antes de ir, pelo telefone da unidade ou pela Central 1746.
