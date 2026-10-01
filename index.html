@@ -440,6 +440,11 @@
           width:100%; padding:11px 12px; border-radius:10px; border:1px solid var(--border);
           background:var(--card); color:var(--ink); font-family:inherit; font-size:0.85rem;
         }
+        .fp-collapse{
+          width:100%; margin-top:18px; padding:11px 14px; border-radius:999px;
+          border:1px solid var(--border); background:var(--card); color:var(--muted);
+          font-family:inherit; font-weight:700; font-size:0.84rem; cursor:pointer;
+        }
         .fp-apply{
           width:100%; margin-top:18px; padding:13px 16px; border:none; border-radius:999px;
           background:var(--accent); color:#fff; font-family:inherit; font-weight:800; font-size:0.9rem; cursor:pointer;
@@ -509,7 +514,8 @@
                 <option value="social">Gratuito ou valor social</option>
             </select>
 
-            <button type="button" id="applyFiltersBtn" class="fp-apply">Aplicar filtros</button>
+            <button type="button" id="collapseFiltersBtn" class="fp-collapse">▴ Recolher filtros</button>
+
         </div>
 
         <div class="panel-divider" style="margin-top:12px;"></div>
