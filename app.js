@@ -1144,7 +1144,7 @@
           touchZoom: true,         // zoom com pinça (dedos)
           dragging: true,
           zoomControl: true,       // botões + e −
-          minZoom: 10
+          minZoom: 3
         }).setView(CENTER, 16);
         liveTileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
