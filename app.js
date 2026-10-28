@@ -39,6 +39,21 @@
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
       }
 
+      // ---- Última conferência dos dados ----
+      // Preencha com a data ('AAAA-MM-DD') SÓ depois de conferir telefones e horários. Vazio = o rodapé não mostra data.
+      const DADOS_VERIFICADOS_EM = '';
+
+      // ---- Segurança: nada vindo dos dados entra no HTML sem passar por estas funções ----
+      const ESC_MAP = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+      function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ESC_MAP[ch]); }
+      function safeUrl(u){
+        try{
+          const x = new URL(String(u));
+          return (x.protocol === 'https:' || x.protocol === 'http:') ? x.href : '';
+        }catch(e){ return ''; }
+      }
+      function safePhone(p){ const s = String(p == null ? '' : p); return /^\+?\d{3,15}$/.test(s) ? s : ''; }
+
       // ---- Unidades públicas/gratuitas de saúde mental (Centro do RJ e entorno) ----
       const clinics = [
         {
@@ -119,7 +134,7 @@
           address: "Rua Marquês de São Vicente, 225 — Gávea",
           phone: "+552135271574",
           phoneDisplay: "(21) 3527-1574 / (21) 3527-1575",
-          website: "http://www.psi.puc-rio.br/site/index.php/spa-servicos",
+          website: "https://www.psi.puc-rio.br/site/index.php/spa-servicos",
           note: "WhatsApp (21) 99328-2539. Site com link para inscrição.",
           ageGroups: ['adultos','menores'],
           categories: ['psicologia'],
@@ -278,7 +293,7 @@
           address: "Rua São Francisco Xavier, 524 — 10º andar, Maracanã",
           phone: "+552123340033",
           phoneDisplay: "(21) 2334-0033 / (21) 2334-0688",
-          website: "http://www.psicologia.uerj.br/SPA.html",
+          website: "https://www.psicologia.uerj.br/SPA.html",
           note: "Entre no site para conferir agenda de atendimento.",
           ageGroups: ['adultos','menores'],
           categories: ['psicologia'],
@@ -933,6 +948,11 @@
         'Entrelaços — Ambulatório do Luto': 'hibrido',
         'CVV — Centro de Valorização da Vida': 'online'
       };
+      // descarta unidades com dados incompletos em vez de quebrar o mapa
+      for(let i = clinics.length - 1; i >= 0; i--){
+        const u = clinics[i];
+        if(!u || !u.name || !Number.isFinite(u.lat) || !Number.isFinite(u.lon)){ console.warn("Unidade ignorada (dados incompletos):", u && u.name); clinics.splice(i, 1); }
+      }
       clinics.forEach((c, i)=>{
         c.id = i;
         c.format = FORMAT_OVERRIDES[c.name] || 'presencial';
@@ -1124,12 +1144,15 @@
       }
 
       // ---- Modo ao vivo (Leaflet + tiles do OpenStreetMap) ----
-      function loadScript(src){
+      function loadScript(src, integrity, timeoutMs = 8000){
         return new Promise((resolve, reject)=>{
           const s = document.createElement('script');
+          const timer = setTimeout(()=>{ s.remove(); reject(new Error('timeout')); }, timeoutMs);
           s.src = src;
-          s.onload = resolve;
-          s.onerror = reject;
+          if(integrity) s.integrity = integrity;   // o navegador recusa o arquivo se ele não for idêntico ao oficial
+          s.crossOrigin = 'anonymous';
+          s.onload = ()=>{ clearTimeout(timer); resolve(); };
+          s.onerror = ()=>{ clearTimeout(timer); reject(new Error('load error')); };
           document.head.appendChild(s);
         });
       }
@@ -1139,6 +1162,7 @@
       }
 
       function initLiveMap(){
+        liveClinicMarkers.length = 0; // evita marcadores duplicados se o mapa for iniciado de novo
         liveMap = L.map('mapLive', {
           scrollWheelZoom: true,   // zoom com o scroll do mouse
           touchZoom: true,         // zoom com pinça (dedos)
@@ -1154,8 +1178,8 @@
         clinics.forEach(c=>{
           const marker = L.marker([c.lat, c.lon], { icon: pinDivIcon('') }).addTo(liveMap);
           marker.bindPopup(
-            `<b>${c.name}</b><br>${c.type}<br>${c.address}<br>` +
-            `<a href="${directionsUrl(c.lat,c.lon)}" target="_blank" rel="noopener">📍 Como chegar</a>`
+            `<b>${esc(c.name)}</b><br>${esc(c.type)}<br>${esc(c.address)}<br>` +
+            `<a href="${esc(directionsUrl(c.lat,c.lon))}" target="_blank" rel="noopener noreferrer">📍 Como chegar</a>`
           );
           liveClinicMarkers.push({ ...c, marker });
         });
@@ -1179,7 +1203,7 @@
         markerLayer.style.display = 'none';
         mapLiveEl.style.display = 'block';
         document.getElementById('zoomCtl').style.display = 'none';
-        mapBadge.textContent = 'mapa ao vivo · zoom real';
+        mapBadge.textContent = 'mapa ao vivo';
         setTimeout(()=> liveMap && liveMap.invalidateSize(), 50);
       }
 
@@ -1198,19 +1222,28 @@
         });
       }
 
+      let liveStarting = false;
       async function tryEnableLiveMap(){
-        if(!navigator.onLine) return;
+        if(mode === 'live' || liveStarting || !navigator.onLine) return;
+        liveStarting = true;
         try{
-          await loadScript('https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js');
+          if(typeof L === 'undefined'){
+            await loadScript('https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js',
+              'sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH');
+          }
           if(typeof L === 'undefined') return;
           await initLiveMap();
           switchToLiveMode();
           if(lastClick) render(lastClick.lat, lastClick.lon);
         }catch(err){
-          // permanece no modo offline (imagem já está pronta e funcional)
+          // permanece no modo simplificado (a imagem já está pronta e funcional)
           if(liveMap){ liveMap.remove(); liveMap = null; }
+        }finally{
+          liveStarting = false;
         }
       }
+      // se a internet voltar depois, tenta o mapa ao vivo de novo
+      window.addEventListener('online', tryEnableLiveMap);
 
       const hint = document.getElementById('hintBadge');
       const panelTitle = document.getElementById('panelTitle');
@@ -1247,7 +1280,7 @@
       TYPE_GROUPS.forEach(g=>{
         const lab = document.createElement('label');
         lab.className = 'filter-check';
-        lab.innerHTML = `<input type="checkbox" data-g="${g.id}" checked> ${g.label}`;
+        lab.innerHTML = `<input type="checkbox" data-g="${esc(g.id)}" checked> ${esc(g.label)}`;
         typeList.appendChild(lab);
       });
       const typeBoxes = Array.from(typeList.querySelectorAll('input'));
@@ -1340,21 +1373,23 @@
       // ---- Item de unidade (usado nos resultados e na lista completa) ----
       function fmtDist(d){ return d < 1000 ? `${Math.round(d)} m` : `${(d/1000).toFixed(1)} km`; }
       function clinicItemInner(c, dist, inrange){
+        const tel1 = safePhone(c.phone), tel2 = safePhone(c.phone2), site = safeUrl(c.website);
+        const labels = String(c.phoneDisplay || c.phone || '').split(' / ');
         return `
           <div class="clinic-top">
-            <span class="clinic-name">${c.name}</span>
-            <span class="clinic-dist ${inrange?'inrange':''}">${fmtDist(dist)}</span>
+            <span class="clinic-name">${esc(c.name)}</span>
+            <span class="clinic-dist ${inrange ? 'inrange' : ''}">${esc(fmtDist(dist))}</span>
           </div>
-          <div class="clinic-meta">${c.type} · ${c.address}</div>
-          <div class="clinic-meta">${FORMAT_LABEL[c.format]} · ${PAY_LABEL[c.payment]}</div>
-          ${c.hours ? `<div class="clinic-meta">${c.hours}</div>` : ''}
-          ${c.note ? `<div class="clinic-note">${c.note}</div>` : ''}
+          <div class="clinic-meta">${esc(c.type)} · ${esc(c.address)}</div>
+          <div class="clinic-meta">${esc(FORMAT_LABEL[c.format])} · ${esc(PAY_LABEL[c.payment])}</div>
+          ${c.hours ? `<div class="clinic-meta">${esc(c.hours)}</div>` : ''}
+          ${c.note ? `<div class="clinic-note">${esc(c.note)}</div>` : ''}
           <div class="clinic-actions">
-            ${c.phone ? `<a href="tel:${c.phone}">📞 Ligar ${c.phone2 ? c.phoneDisplay.split(' / ')[0] : c.phoneDisplay}</a>` : ''}
-            ${c.phone2 ? `<a href="tel:${c.phone2}">📞 Ou ${c.phoneDisplay.split(' / ').pop()}</a>` : ''}
-            ${c.website ? `<a href="${c.website}" target="_blank" rel="noopener">🌐 Site</a>` : ''}
-            <a href="${directionsUrl(c.lat, c.lon)}" target="_blank" rel="noopener">📍 Como chegar</a>
-            <a href="#" data-focus="${c.id}">🗺️ Ver no mapa</a>
+            ${tel1 ? `<a href="tel:${tel1}">📞 Ligar ${esc(tel2 ? labels[0] : labels.join(' / '))}</a>` : ''}
+            ${tel2 ? `<a href="tel:${tel2}">📞 Ou ${esc(labels[labels.length - 1])}</a>` : ''}
+            ${site ? `<a href="${esc(site)}" target="_blank" rel="noopener noreferrer">🌐 Site</a>` : ''}
+            <a href="${esc(directionsUrl(c.lat, c.lon))}" target="_blank" rel="noopener noreferrer">📍 Como chegar</a>
+            <a href="#" data-focus="${esc(c.id)}">🗺️ Ver no mapa</a>
           </div>
         `;
       }
@@ -1429,39 +1464,48 @@
         toggleFiltersBtn.scrollIntoView({ behavior:'smooth', block:'start' });
       });
 
+      const ADDR_MAX_LEN = 120;
+      const ADDR_MIN_GAP_MS = 1100;   // o Nominatim aceita no máximo 1 busca por segundo
+      const addrCache = new Map();
+      let lastAddrAt = 0;
+      function addrMsg(text, cls){ addressSearchMsg.textContent = text; addressSearchMsg.className = 'search-msg' + (cls ? ' ' + cls : ''); }
+
       async function searchAddress(){
-        const q = addressInput.value.trim();
-        if(!q){
-          addressSearchMsg.textContent = 'Digite um endereço, rua ou bairro.';
-          addressSearchMsg.className = 'search-msg error';
-          return;
+        const q = addressInput.value.trim().slice(0, ADDR_MAX_LEN);
+        const key = q.toLowerCase();
+        if(!q){ addrMsg('Digite um endereço, rua ou bairro.', 'error'); return; }
+        if(!addrCache.has(key)){
+          if(!navigator.onLine){ addrMsg('Sem internet agora. Você ainda pode tocar direto no mapa.', 'error'); return; }
+          if(Date.now() - lastAddrAt < ADDR_MIN_GAP_MS){ addrMsg('Aguarde um instante e toque em Buscar de novo.', 'error'); return; }
         }
-        addressSearchMsg.textContent = 'Buscando…';
-        addressSearchMsg.className = 'search-msg';
+        addrMsg('Buscando…');
         addressSearchBtn.disabled = true;
+        const ctrl = new AbortController();
+        const timer = setTimeout(()=> ctrl.abort(), 8000);
         try{
-          const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q='
-            + encodeURIComponent(q + ', Rio de Janeiro, Brasil');
-          const resp = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
-          if(!resp.ok) throw new Error('network');
-          const data = await resp.json();
-          if(!data || !data.length){
-            addressSearchMsg.textContent = 'Endereço não encontrado. Tente incluir rua e bairro.';
-            addressSearchMsg.className = 'search-msg error';
-            return;
+          let hit = addrCache.get(key);
+          if(!hit){
+            lastAddrAt = Date.now();
+            const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q='
+              + encodeURIComponent(q + ', Rio de Janeiro, Brasil');
+            const resp = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' }, signal: ctrl.signal });
+            if(resp.status === 429){ addrMsg('Muitas buscas seguidas. Espere um pouco ou toque direto no mapa.', 'error'); return; }
+            if(!resp.ok) throw new Error('network');
+            const data = await resp.json();
+            const first = Array.isArray(data) ? data[0] : null;
+            const lat = first ? parseFloat(first.lat) : NaN, lon = first ? parseFloat(first.lon) : NaN;
+            if(!Number.isFinite(lat) || !Number.isFinite(lon)){ addrMsg('Endereço não encontrado. Tente incluir rua e bairro.', 'error'); return; }
+            hit = { lat, lon, name: String(first.display_name || q) };
+            addrCache.set(key, hit);
           }
-          const lat = parseFloat(data[0].lat), lon = parseFloat(data[0].lon);
-          lastClick = { lat, lon };
-          render(lat, lon);
-          if(mode === 'live' && liveMap){
-            liveMap.setView([lat, lon], 16);
-          }
-          addressSearchMsg.textContent = 'Mostrando unidades perto de: ' + data[0].display_name;
-          addressSearchMsg.className = 'search-msg ok';
+          lastClick = { lat: hit.lat, lon: hit.lon };
+          render(hit.lat, hit.lon);
+          if(mode === 'live' && liveMap) liveMap.setView([hit.lat, hit.lon], 16);
+          addrMsg('Mostrando unidades perto de: ' + hit.name, 'ok');
         }catch(err){
-          addressSearchMsg.textContent = 'Não consegui buscar agora — precisa de internet para localizar o endereço. Você ainda pode tocar direto no mapa.';
-          addressSearchMsg.className = 'search-msg error';
+          addrMsg('Não consegui buscar agora — precisa de internet para localizar o endereço. Você ainda pode tocar direto no mapa.', 'error');
         }finally{
+          clearTimeout(timer);
           addressSearchBtn.disabled = false;
         }
       }
@@ -1522,6 +1566,13 @@
       // tenta atualizar para o mapa ao vivo (zoom real + rotas); se falhar, o modo offline já está pronto
       // aplica o estado inicial dos filtros (por padrão, mostra tudo) e tenta o mapa ao vivo
       // ponto inicial = Estácio de Sá (Presidente Vargas)
+      function showDataDate(){
+        const el = document.getElementById('dataNote');
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(DADOS_VERIFICADOS_EM);
+        if(!el || !m) return;
+        el.textContent = `Telefones e horários conferidos pela última vez em ${m[3]}/${m[2]}/${m[1]}. Podem mudar — ligue antes de ir.`;
+      }
+      showDataDate();
       lastClick = { lat: HOME[0], lon: HOME[1], home: true };
       applyFilters();
       tryEnableLiveMap();
