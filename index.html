@@ -6,15 +6,21 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <!-- Segurança: só permite o que o site realmente usa (o "file:" deixa abrir o index.html direto do computador). -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' file: https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.tile.openstreetmap.org https://tile.openstreetmap.org https://cdn.jsdelivr.net; connect-src 'self' https://nominatim.openstreetmap.org; base-uri 'self'; form-action 'none'; object-src 'none'">
+    <!-- Manda só o endereço do site (nunca o caminho) ao OpenStreetMap. NÃO use "no-referrer": os mapas do OSM bloqueiam pedidos sem Referer. -->
+    <meta name="referrer" content="strict-origin-when-cross-origin">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="author" content="José Henrique Macedo de Oliveira">
     <meta name="copyright" content="© 2026 José Henrique Macedo de Oliveira">
-    <title>Opa! Onde procurar ajuda?</title>
+    <title>Saúde mental gratuita no Rio de Janeiro — encontre atendimento perto de você</title>
+    <meta name="description" content="Mapa de serviços de saúde mental gratuitos ou de valor social no Centro do Rio de Janeiro: CAPS, postos de saúde, UPAs, clínicas-escola e apoio. Veja telefone, horário e como chegar.">
     <!-- Estas duas tentam carregar da internet (fonte + mapa ao vivo com zoom real).
          Se não houver internet, o navegador simplesmente ignora e o site usa
          a fonte do sistema + o mapa em imagem embutida (fallback automático via JS). -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
-    <link rel="stylesheet" id="leafletCss" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <link rel="stylesheet" id="leafletCss" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
     <style>
         :root{
           --bg:#f2f6f4;
@@ -471,15 +477,55 @@
         }
         .list-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
         .list-head p{ margin:0 0 4px; }
+
+        /* ---- Clareza e leitura ---- */
+        header .lead{ font-size:1.02rem; line-height:1.5; color:var(--ink); margin:8px 0 10px; max-width:60ch; }
+        .steps{ margin:0 0 4px; padding-left:1.3em; font-size:0.92rem; line-height:1.55; color:var(--ink); }
+        .steps li{ margin:2px 0; }
+        .sos{ margin:12px 0; padding:12px 14px; border-radius:14px; background:var(--accent-soft); border:1px solid var(--accent); }
+        .sos p{ margin:0 0 8px; font-size:0.95rem; line-height:1.4; }
+        .sos-actions{ display:flex; flex-wrap:wrap; gap:8px; }
+        .sos-actions a{ flex:1 1 220px; display:flex; align-items:center; gap:10px; min-height:48px; padding:8px 12px; border-radius:12px; background:var(--card); color:var(--ink); text-decoration:none; font-size:0.86rem; line-height:1.3; border:1px solid var(--border); }
+        .sos-actions a strong{ font-size:1.5rem; color:var(--accent-dark); }
+        .sos small{ display:block; margin-top:8px; font-size:0.82rem; color:var(--muted); line-height:1.4; }
+        .privacy-note{ margin:8px 0 0; font-size:0.8rem; line-height:1.45; color:var(--muted); }
+        .glossary{ margin-top:14px; padding:12px 14px; border-radius:14px; background:var(--card); border:1px solid var(--border); }
+        .glossary summary{ cursor:pointer; font-weight:800; font-size:0.92rem; }
+        .glossary dl{ margin:10px 0 0; }
+        .glossary dt{ font-weight:800; margin-top:10px; }
+        .glossary dd{ margin:2px 0 0; font-size:0.86rem; line-height:1.5; color:var(--muted); }
+        .clinic-meta{ font-size:0.86rem; }
+        .clinic-note{ font-size:0.84rem; }
+        .clinic-actions a{ font-size:0.84rem; min-height:40px; display:inline-flex; align-items:center; }
+        .legend{ font-size:0.82rem; }
+        .search-msg{ font-size:0.84rem; }
+        .data-note{ margin:0 0 6px; font-size:0.82rem; color:var(--ink); }
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible{ outline:3px solid #2f6fed; outline-offset:2px; }
     </style>
 </head>
 <body>
 <div class="app">
 
+    <noscript><div class="card"><strong>O mapa precisa de JavaScript.</strong> Ative o JavaScript no navegador para usar o site. Em crise, ligue 188 (CVV) ou 192 (SAMU).</div></noscript>
+
     <header>
         <h1>🧠 Saúde Mental Gratuita — Rio de Janeiro</h1>
-        <p>Toque no mapa para ver as unidades mais próximas de você.</p>
+        <p class="lead">Encontre perto de você atendimento psicológico e psiquiátrico gratuito ou de valor social (preço reduzido).</p>
+        <ol class="steps">
+            <li>Toque no mapa ou digite um endereço.</li>
+            <li>Veja as unidades mais próximas, com telefone e horário.</li>
+            <li>Ligue antes de ir, para confirmar o atendimento.</li>
+        </ol>
     </header>
+
+    <section class="sos" aria-label="Ajuda imediata">
+        <p><strong>Precisa de ajuda agora?</strong> As duas ligações abaixo são gratuitas.</p>
+        <div class="sos-actions">
+            <a href="tel:188" aria-label="Ligar para o CVV, número 188"><strong>188</strong><span>CVV: conversa de apoio emocional, 24 horas</span></a>
+            <a href="tel:192" aria-label="Ligar para o SAMU, número 192"><strong>192</strong><span>SAMU: risco de vida ou emergência médica</span></a>
+        </div>
+        <small>Você também pode ir direto a uma UPA ou a um CER (pronto atendimento 24 horas).</small>
+    </section>
 
     <div class="card">
         <button type="button" id="toggleFiltersBtn" class="filters-toggle">
@@ -501,6 +547,7 @@
                 <button type="button" id="addressSearchBtn">Buscar</button>
             </div>
             <p id="addressSearchMsg" class="search-msg"></p>
+            <p class="privacy-note">🔒 O endereço digitado é enviado ao OpenStreetMap (serviço de mapas) só para achar o lugar. Este site não guarda o endereço. Se preferir, toque direto no mapa: nenhum endereço é enviado.</p>
 
             <h3 class="fp-sec">Tipo de atendimento</h3>
             <div id="typeList" class="fp-list"></div>
@@ -535,7 +582,7 @@
         <div class="panel-divider" style="margin-top:12px;"></div>
 
         <div class="radius-row" style="margin-top:12px;">
-            <label for="radiusInput">Raio de busca</label>
+            <label for="radiusInput">Distância máxima a partir do ponto (raio)</label>
             <span class="radius-value"><span id="radiusValue">100</span> m</span>
         </div>
         <input type="range" id="radiusInput" min="50" max="1000" step="50" value="100">
@@ -549,13 +596,13 @@
         <div id="markerLayer" style="position:absolute; inset:0; pointer-events:none;"></div>
         </div>
         <div class="zoom-ctl" id="zoomCtl"><button type="button" id="zoomInBtn" aria-label="Aproximar">+</button><button type="button" id="zoomOutBtn" aria-label="Afastar">−</button></div>
-        <div class="map-badge" id="mapBadge">imagem offline</div>
+        <div class="map-badge" id="mapBadge">mapa simplificado (sem internet)</div>
     </div>
 
     <div class="legend">
         <span><i class="dot clinic"></i> Unidade de saúde</span>
-        <span><i class="dot point"></i> Ponto tocado</span>
-        <span><i class="dot selected"></i> Dentro do raio</span>
+        <span><i class="dot point"></i> Local que você escolheu</span>
+        <span><i class="dot selected"></i> Dentro da distância escolhida</span>
     </div>
 
     <button type="button" id="openListBtn" class="list-btn">📋 Ver lista de unidades <span id="listCount"></span></button>
@@ -577,11 +624,21 @@
         <div id="resultsList"></div>
     </div>
 
-    <a class="crisis" href="tel:188" aria-label="Ligar gratuitamente para o CVV, número 188">
-        💬 Se você está passando por uma crise emocional agora, ligue gratuitamente para o <strong>CVV — 188</strong> (24h, todos os dias) ou procure a UPA/CER mais próxima.
-    </a>
+    <details class="glossary">
+        <summary>❓ O que significam CAPS, CMS, UPA e as outras siglas?</summary>
+        <dl>
+            <dt>CAPS</dt><dd>Centro de Atenção Psicossocial. Serviço gratuito do SUS para pessoas com sofrimento mental intenso. Ligue antes para saber como ser atendido.</dd>
+            <dt>CAPS AD</dt><dd>CAPS para quem precisa de ajuda com álcool e outras drogas.</dd>
+            <dt>CMS</dt><dd>Centro Municipal de Saúde, o posto de saúde da prefeitura. Peça atendimento na triagem para ser encaminhado a psicólogo ou psiquiatra.</dd>
+            <dt>UPA e CER</dt><dd>Pronto atendimento 24 horas para urgências e emergências, inclusive crises de saúde mental.</dd>
+            <dt>SPA</dt><dd>Serviço de Psicologia Aplicada: clínica-escola de universidade, com atendimento gratuito ou de valor social. Pode ter fila de espera.</dd>
+            <dt>CAP</dt><dd>Coordenadoria de saúde da região. Orienta qual serviço procurar.</dd>
+            <dt>SUS</dt><dd>Sistema Único de Saúde: a rede pública e gratuita de saúde do Brasil.</dd>
+        </dl>
+    </details>
 
     <footer>
+        <p id="dataNote" class="data-note">Telefones e horários podem mudar — ligue antes de ir.</p>
         Este site carrega um <strong>mapa ao vivo do OpenStreetMap.</strong> (caso não saiba como chegar clique "Como chegar" ele vai abrir as rotas no maps). Se não houver internet no momento uma imagem que <strong>não tem 100% de precisão</strong> vai ser carregada — telefones e horários de atendimento público podem mudar — confirme antes de ir, pelo telefone da unidade ou pela Central 1746.
     </footer>
 
