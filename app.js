@@ -924,19 +924,6 @@
           categories: ['caps'],
           website: "https://saude.prefeitura.rio/caps/",
           lat: -22.921, lon: -43.685
-        },
-        {
-          name: "CVV — Centro de Valorização da Vida",
-          type: "Apoio emocional virtual e telefônico (voluntariado, gratuito)",
-          address: "Atendimento por telefone, chat e e-mail — sem endereço físico",
-          phone: "+55188",
-          phoneDisplay: "188",
-          website: "https://cvv.org.br",
-          hours: "24 horas",
-          note: "Ligação gratuita e sigilosa, de todo o Brasil. Chat e e-mail em cvv.org.br.",
-          ageGroups: ['adultos','menores'],
-          categories: ['apoio-social','urgencia'],
-          lat: -22.9068, lon: -43.1729
         }
 
       ];
@@ -945,8 +932,7 @@
       // formato: 'presencial' (padrão) | 'online' | 'hibrido'  — pagamento: 'gratuito' | 'social'
       const FORMAT_OVERRIDES = {
         'Mapa do Acolhimento': 'online',
-        'Entrelaços — Ambulatório do Luto': 'hibrido',
-        'CVV — Centro de Valorização da Vida': 'online'
+        'Entrelaços — Ambulatório do Luto': 'hibrido'
       };
       // descarta unidades com dados incompletos em vez de quebrar o mapa
       for(let i = clinics.length - 1; i >= 0; i--){
